@@ -255,6 +255,28 @@ const userPoolClient = backend.auth.resources.userPoolClient;
 - Mac ARM64 でビルドできるなら `deploy-time-build` は不要
 - Amplify の toolkit-lib 更新後は hotswap も使える
 
+#### Amplify で Hotswap を先行利用する方法（Workaround）
+
+Amplify の公式アップデートを待たずに試す場合、`package.json` の `overrides` を使用：
+
+```json
+{
+  "overrides": {
+    "@aws-cdk/toolkit-lib": "1.14.0",
+    "@smithy/core": "^3.21.0"
+  }
+}
+```
+
+| パッケージ | バージョン | 理由 |
+|-----------|-----------|------|
+| `@aws-cdk/toolkit-lib` | `1.14.0` | AgentCore Hotswap 対応版 |
+| `@smithy/core` | `^3.21.0` | AWS SDK のリグレッションバグ対応 |
+
+**注意**: 正攻法ではないのでお試し用途。Amplify の公式アップデートが来たら overrides を削除する。
+
+参考: [go-to-k/amplify-agentcore-cdk](https://github.com/go-to-k/amplify-agentcore-cdk)
+
 #### 本番環境（Amplify Console）
 - Docker build 未サポートのため工夫が必要
 - 選択肢：
@@ -466,9 +488,9 @@ setMessages(prev =>
 
 #### デプロイ済みリソース（sandbox環境）
 - **Runtime名**: `marp_agent_dev`（sandbox）/ `marp_agent_main`（本番予定）
-- **Cognito User Pool**: `us-east-1_Q60t5VTsR`
-- **Cognito Client**: `62ukd1440lttuvdphna9e0q46t`
-- **Identity Pool**: `us-east-1:8fbfe5af-bf53-4d0d-86d4-df5380a7b5e7`
+- **Cognito User Pool**: `amplify_outputs.json` を参照
+- **Cognito Client**: `amplify_outputs.json` を参照
+- **Identity Pool**: `amplify_outputs.json` を参照
 
 ### 対象ファイル
 

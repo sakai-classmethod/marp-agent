@@ -3,6 +3,10 @@ import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import { Chat } from './components/Chat';
 import { SlidePreview } from './components/SlidePreview';
+import { exportPdf, exportPdfMock } from './hooks/useAgentCore';
+
+// モック使用フラグ
+const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 type Tab = 'chat' | 'preview';
 
@@ -30,23 +34,22 @@ function MainApp({ signOut }: { signOut?: () => void }) {
 
     setIsDownloading(true);
     try {
-      // TODO: 実際のPDF生成APIを呼び出す
-      // ローカル開発用のモック
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const exportFn = useMock ? exportPdfMock : exportPdf;
+      const blob = await exportFn(markdown);
 
-      // モック: マークダウンをBlobとしてダウンロード
-      const blob = new Blob([markdown], { type: 'text/markdown' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'slide.md';
+      a.download = useMock ? 'slide.md' : 'slide.pdf';
       a.click();
       URL.revokeObjectURL(url);
 
-      alert('PDF生成機能は本番環境でのみ利用可能です。\n代わりにマークダウンファイルをダウンロードしました。');
+      if (useMock) {
+        alert('モックモード: マークダウンファイルをダウンロードしました。');
+      }
     } catch (error) {
       console.error('Download error:', error);
-      alert('ダウンロードに失敗しました');
+      alert(`ダウンロードに失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
     } finally {
       setIsDownloading(false);
     }

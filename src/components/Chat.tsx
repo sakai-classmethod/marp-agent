@@ -95,17 +95,37 @@ export function Chat({ onMarkdownGenerated, currentMarkdown }: ChatProps) {
           setStatus(newStatus);
         },
         onToolUse: (toolName) => {
-          // ツール使用中のステータスを表示
+          // ツール使用中のステータスを表示（既存のステータスがなければ追加）
           if (toolName === 'output_slide') {
-            setMessages(prev => [
-              ...prev,
-              { role: 'assistant', content: '', isStatus: true, statusText: 'スライドを生成中...' }
-            ]);
+            setMessages(prev => {
+              // Web検索があれば完了に更新し、output_slideのステータスを追加
+              const hasExisting = prev.some(
+                msg => msg.isStatus && msg.statusText === 'スライドを生成中...'
+              );
+              if (hasExisting) return prev;
+
+              // Web検索中を完了に更新
+              const updated = prev.map(msg =>
+                msg.isStatus && msg.statusText === 'Web検索中...'
+                  ? { ...msg, statusText: 'Web検索完了' }
+                  : msg
+              );
+              return [
+                ...updated,
+                { role: 'assistant', content: '', isStatus: true, statusText: 'スライドを生成中...' }
+              ];
+            });
           } else if (toolName === 'web_search') {
-            setMessages(prev => [
-              ...prev,
-              { role: 'assistant', content: '', isStatus: true, statusText: 'Web検索中...' }
-            ]);
+            setMessages(prev => {
+              const hasExisting = prev.some(
+                msg => msg.isStatus && msg.statusText === 'Web検索中...'
+              );
+              if (hasExisting) return prev;
+              return [
+                ...prev,
+                { role: 'assistant', content: '', isStatus: true, statusText: 'Web検索中...' }
+              ];
+            });
           }
         },
         onMarkdown: (markdown) => {

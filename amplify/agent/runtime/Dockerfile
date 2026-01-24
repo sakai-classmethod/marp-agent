@@ -2,12 +2,14 @@ FROM --platform=linux/arm64 python:3.13-slim-bookworm
 
 WORKDIR /app
 
-# Node.js と Chromium をインストール
+# Node.js、Chromium、日本語フォントをインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nodejs \
     npm \
     chromium \
-    && rm -rf /var/lib/apt/lists/*
+    fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv
 
 # Marp CLI をインストール
 RUN npm install -g @marp-team/marp-cli

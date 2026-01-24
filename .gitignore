@@ -38,3 +38,7 @@ uv.lock
 .env
 .env.local
 .env.*.local
+
+# Test screenshots
+tests/screenshots/*
+!tests/screenshots/.gitkeep
