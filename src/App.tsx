@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import { Chat } from './components/Chat';
@@ -22,11 +22,23 @@ function MainApp({ signOut }: { signOut?: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [markdown, setMarkdown] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [editPromptTrigger, setEditPromptTrigger] = useState(0);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   const handleMarkdownGenerated = (newMarkdown: string) => {
     setMarkdown(newMarkdown);
     // スライド生成後、自動でプレビュータブに切り替え
     setActiveTab('preview');
+  };
+
+  const handleRequestEdit = () => {
+    setActiveTab('chat');
+    // 修正用メッセージをトリガー
+    setEditPromptTrigger(prev => prev + 1);
+    // タブ切り替え後、入力欄にフォーカス
+    setTimeout(() => {
+      chatInputRef.current?.focus();
+    }, 100);
   };
 
   const handleDownloadPdf = async () => {
@@ -105,6 +117,8 @@ function MainApp({ signOut }: { signOut?: () => void }) {
           <Chat
             onMarkdownGenerated={handleMarkdownGenerated}
             currentMarkdown={markdown}
+            inputRef={chatInputRef}
+            editPromptTrigger={editPromptTrigger}
           />
         </div>
         <div className={`h-full ${activeTab === 'preview' ? '' : 'hidden'}`}>
@@ -112,6 +126,7 @@ function MainApp({ signOut }: { signOut?: () => void }) {
             markdown={markdown}
             onDownloadPdf={handleDownloadPdf}
             isDownloading={isDownloading}
+            onRequestEdit={handleRequestEdit}
           />
         </div>
       </main>

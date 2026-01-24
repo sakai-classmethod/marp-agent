@@ -12,6 +12,8 @@ interface Message {
 interface ChatProps {
   onMarkdownGenerated: (markdown: string) => void;
   currentMarkdown: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+  editPromptTrigger?: number;  // 値が変わるたびに修正用メッセージを表示
 }
 
 const INITIAL_MESSAGE = 'どんな資料を作りたいですか？';
@@ -19,7 +21,9 @@ const INITIAL_MESSAGE = 'どんな資料を作りたいですか？';
 // モック使用フラグ（VITE_USE_MOCK=true で強制的にモック使用）
 const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
-export function Chat({ onMarkdownGenerated, currentMarkdown }: ChatProps) {
+const EDIT_PROMPT_MESSAGE = 'どのように修正しますか？';
+
+export function Chat({ onMarkdownGenerated, currentMarkdown, inputRef, editPromptTrigger }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -61,6 +65,42 @@ export function Chat({ onMarkdownGenerated, currentMarkdown }: ChatProps) {
 
     streamInitialMessage();
   }, []);
+
+  // 修正依頼ボタンが押されたときのストリーミングメッセージ
+  useEffect(() => {
+    if (!editPromptTrigger || editPromptTrigger === 0) return;
+
+    const streamEditPrompt = async () => {
+      // 既存の「どのように修正しますか？」メッセージを削除してから追加
+      setMessages(prev => {
+        const filtered = prev.filter(
+          msg => !(msg.role === 'assistant' && msg.content === EDIT_PROMPT_MESSAGE)
+        );
+        return [...filtered, { role: 'assistant', content: '', isStreaming: true }];
+      });
+
+      for (const char of EDIT_PROMPT_MESSAGE) {
+        await new Promise(resolve => setTimeout(resolve, 30));
+        setMessages(prev =>
+          prev.map((msg, idx) =>
+            idx === prev.length - 1 && msg.role === 'assistant' && msg.isStreaming
+              ? { ...msg, content: msg.content + char }
+              : msg
+          )
+        );
+      }
+
+      setMessages(prev =>
+        prev.map((msg, idx) =>
+          idx === prev.length - 1 && msg.isStreaming
+            ? { ...msg, isStreaming: false }
+            : msg
+        )
+      );
+    };
+
+    streamEditPrompt();
+  }, [editPromptTrigger]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,6 +281,7 @@ export function Chat({ onMarkdownGenerated, currentMarkdown }: ChatProps) {
       <form onSubmit={handleSubmit} className="border-t px-6 py-4">
         <div className="flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}

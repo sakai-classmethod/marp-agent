@@ -6,9 +6,10 @@ interface SlidePreviewProps {
   markdown: string;
   onDownloadPdf: () => void;
   isDownloading: boolean;
+  onRequestEdit?: () => void;
 }
 
-export function SlidePreview({ markdown, onDownloadPdf, isDownloading }: SlidePreviewProps) {
+export function SlidePreview({ markdown, onDownloadPdf, isDownloading, onRequestEdit }: SlidePreviewProps) {
   const { slides, css } = useMemo(() => {
     if (!markdown) return { slides: [], css: '' };
 
@@ -54,13 +55,23 @@ export function SlidePreview({ markdown, onDownloadPdf, isDownloading }: SlidePr
         <span className="text-sm text-gray-600">
           {slides.length} スライド
         </span>
-        <button
-          onClick={onDownloadPdf}
-          disabled={isDownloading || slides.length === 0}
-          className="btn-kag text-white px-4 py-2 rounded-lg flex items-center gap-2"
-        >
-          {isDownloading ? '生成中...' : 'PDFダウンロード'}
-        </button>
+        <div className="flex gap-2">
+          {onRequestEdit && (
+            <button
+              onClick={onRequestEdit}
+              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              修正を依頼
+            </button>
+          )}
+          <button
+            onClick={onDownloadPdf}
+            disabled={isDownloading || slides.length === 0}
+            className="btn-kag text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          >
+            {isDownloading ? '生成中...' : 'PDFダウンロード'}
+          </button>
+        </div>
       </div>
 
       {/* スライド一覧 */}
