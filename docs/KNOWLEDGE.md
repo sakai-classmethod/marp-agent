@@ -404,6 +404,74 @@ setMessages(prev =>
 
 ---
 
+## API接続実装（TODO）
+
+### 概要
+フロントエンド（React）からAgentCoreエンドポイントを呼び出す。
+
+### 開発フロー
+
+#### Phase 1: sandbox起動
+1. `amplify/backend.ts` に `addOutput()` を追加
+2. `npx ampx sandbox` を実行
+3. `amplify_outputs.json` が生成されることを確認
+
+#### Phase 2: API接続実装
+1. `src/main.tsx` にAmplify初期化を追加
+2. `src/hooks/useAgentCore.ts` を新規作成
+3. `src/components/Chat.tsx` を修正
+
+### 対象ファイル
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `amplify/backend.ts` | `addOutput()` でエンドポイント情報追加 |
+| `src/main.tsx` | Amplify初期化 |
+| `src/hooks/useAgentCore.ts` | 新規作成（API呼び出しフック） |
+| `src/components/Chat.tsx` | 実際のAPI呼び出しに置き換え |
+
+### AgentCore呼び出しAPI仕様
+
+```
+POST https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{arn}/invocations
+```
+
+ヘッダー:
+```
+Authorization: Bearer {cognitoToken}
+Content-Type: application/json
+Accept: text/event-stream
+```
+
+リクエストボディ:
+```json
+{
+  "prompt": "ユーザーの入力",
+  "markdown": "現在のスライド（編集時）"
+}
+```
+
+### Amplify Gen2 でカスタム出力を追加
+
+```typescript
+// amplify/backend.ts
+const { endpoint } = createMarpAgent({ ... });
+
+backend.addOutput({
+  custom: {
+    agentEndpointArn: endpoint.agentRuntimeEndpointArn,
+  },
+});
+```
+
+フロントエンドでアクセス:
+```typescript
+import outputs from '../amplify_outputs.json';
+const endpointArn = outputs.custom?.agentEndpointArn;
+```
+
+---
+
 ## 参考リンク
 
 - [Marp公式](https://marp.app/)

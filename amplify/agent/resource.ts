@@ -1,8 +1,13 @@
 import * as path from 'path';
+import * as url from 'url';
 import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as agentcore from '@aws-cdk/aws-bedrock-agentcore-alpha';
 import type { IUserPool, IUserPoolClient } from 'aws-cdk-lib/aws-cognito';
+
+// ESモジュールで__dirnameを取得
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface MarpAgentProps {
   stack: cdk.Stack;
@@ -23,7 +28,7 @@ export function createMarpAgent({ stack, userPool, userPoolClient }: MarpAgentPr
 
   // AgentCore Runtime作成
   const runtime = new agentcore.Runtime(stack, 'MarpAgentRuntime', {
-    runtimeName: 'marp-agent',
+    runtimeName: 'marp_agent',
     agentRuntimeArtifact,
     authorizerConfiguration: authConfig,
   });
@@ -38,7 +43,7 @@ export function createMarpAgent({ stack, userPool, userPoolClient }: MarpAgentPr
   }));
 
   // エンドポイント作成
-  const endpoint = runtime.addEndpoint('marp-agent-endpoint');
+  const endpoint = runtime.addEndpoint('marp_agent_endpoint');
 
   // 出力
   new cdk.CfnOutput(stack, 'MarpAgentRuntimeArn', {
