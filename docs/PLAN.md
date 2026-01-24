@@ -107,14 +107,24 @@ k.gotoさんにより、CDK hotswapがAgentCore Runtimeに対応した。
 2. Amplify/CDKのアップデートを追跡
 3. 本番デプロイ方法は後で決定（GitHub Actions or 分岐ロジック）
 
+## 進捗状況
+
+| ステップ | 状態 | 内容 |
+|---------|------|------|
+| Step 1 | ✅完了 | プロジェクト初期化（Amplify Gen2 + Vite + Tailwind） |
+| Step 2 | ✅完了 | エージェント実装（Strands Agent + Marp CLI） |
+| Step 3 | 🔄進行中 | インフラ構築（AgentCore Runtime CDK） |
+| Step 4 | ⏳未着手 | フロントエンド実装 |
+| Step 5 | ⏳未着手 | 統合・テスト |
+
 ## 機能一覧
 
 ### MVP（Phase 1）
-- [ ] ユーザー認証（Cognito）
+- [ ] ユーザー認証（Cognito）← 本番のみ
 - [ ] チャットUI（指示入力）
-- [ ] スライド生成（Marp Markdown）
+- [x] スライド生成（Marp Markdown）← エージェント実装済み
 - [ ] リアルタイムプレビュー
-- [ ] PDFダウンロード
+- [x] PDFダウンロード ← エージェント実装済み
 
 ### 追加機能（Phase 2）
 - [ ] スライド編集（マークダウンエディタ）
@@ -139,30 +149,30 @@ docs/
 ```
 marp-agent/
 ├── docs/                        # ドキュメント
+│   ├── PLAN.md
+│   ├── SPEC.md
+│   └── KNOWLEDGE.md
 ├── amplify/
 │   ├── auth/
 │   │   └── resource.ts          # Cognito認証設定
 │   ├── agent/
-│   │   ├── resource.ts          # AgentCore CDK定義
+│   │   ├── resource.ts          # AgentCore CDK定義（作成予定）
 │   │   └── runtime/
-│   │       ├── Dockerfile       # エージェントコンテナ
-│   │       ├── requirements.txt
-│   │       └── agent.py         # Strands Agent実装
-│   ├── storage/
-│   │   └── resource.ts          # S3バケット設定
+│   │       ├── Dockerfile       # エージェントコンテナ ✅
+│   │       ├── requirements.txt # Python依存関係 ✅
+│   │       ├── pyproject.toml   # uv管理用 ✅
+│   │       └── agent.py         # Strands Agent実装 ✅
 │   └── backend.ts               # バックエンド統合
+├── tests/
+│   └── test_agent.py            # エージェント単体テスト ✅
 ├── src/
-│   ├── App.tsx                  # メインアプリ
-│   ├── components/
-│   │   ├── Chat.tsx             # チャットUI
-│   │   ├── SlidePreview.tsx     # スライドプレビュー
-│   │   └── SlideEditor.tsx      # マークダウンエディタ
-│   └── hooks/
-│       └── useAgent.ts          # エージェント通信
+│   ├── App.tsx                  # メインアプリ ✅
+│   ├── index.css                # Tailwind + カスタムカラー ✅
+│   └── main.tsx
+├── index.html                   # HTMLテンプレート ✅
+├── vite.config.ts               # Vite + Tailwind設定 ✅
 ├── package.json
-├── vite.config.ts
-├── tsconfig.json
-└── PLAN.md
+└── tsconfig.json
 ```
 
 ## Strands Agent 設計
@@ -192,46 +202,43 @@ marp-agent/
 
 ## 実装ステップ
 
-### Step 1: プロジェクト初期化
-1. Amplify Gen2プロジェクト作成
-2. 認証設定（Cognito）
-3. 基本的なReact UI
+### Step 1: プロジェクト初期化 ✅
+1. ✅ Amplify Gen2プロジェクト作成（npm create amplify）
+2. ✅ 認証設定（Cognito）← 本番デプロイ時に有効化
+3. ✅ 基本的なReact UI（Vite + Tailwind CSS v4）
 
-### Step 2: エージェント実装
-1. Strands Agent 作成（agent.py）
-2. Marp CLI をDockerfileに追加
-3. ツール実装（generate, edit, preview, export）
+### Step 2: エージェント実装 ✅
+1. ✅ Strands Agent 作成（agent.py）
+2. ✅ Marp CLI をDockerfileに追加
+3. ✅ 機能実装（generate, edit, export_pdf）
+4. ✅ 単体テスト実行・成功
 
-### Step 3: インフラ構築
-1. AgentCore Runtime CDK定義
-2. S3バケット設定
-3. IAMロール・権限設定
+### Step 3: インフラ構築 🔄
+1. AgentCore Runtime CDK定義（amplify/agent/resource.ts）
+2. Cognito認証統合
+3. Bedrockモデル権限設定
 
 ### Step 4: フロントエンド実装
-1. チャットUI
+1. チャットUI（タブ切り替え）
 2. SSEストリーミング対応
 3. スライドプレビューコンポーネント
 4. PDFダウンロード機能
 
 ### Step 5: 統合・テスト
-1. ローカル開発環境（ampx sandbox）
-2. E2Eテスト
-3. 本番デプロイ
+1. ローカルE2Eテスト
+2. 本番デプロイ（Amplify Console）
 
-## 検討事項・質問
+## 決定済み事項
 
-### 要確認
-1. **認証**: 認証は必須？それともパブリックアクセスOK？
-2. **保存**: スライドはユーザーごとに保存する？一時的でOK？
-3. **テーマ**: Marpのデフォルトテーマのみ？カスタムテーマ対応？
-4. **同時編集**: 複数人での共同編集は必要？
-
-### 技術的な検討
-1. **Marp CLI実行**: AgentCoreコンテナ内でMarp CLIを実行
-   - Node.js + @marp-team/marp-cli をインストール
-   - Puppeteer/Chromiumが必要（PDF出力用）
-2. **ファイルサイズ**: PDF出力のサイズ上限
-3. **タイムアウト**: スライド生成の時間制限
+| 項目 | 決定 |
+|------|------|
+| 認証 | ローカル開発時はなし、本番のみCognito認証 |
+| 保存 | MVPではセッション限り（フロントエンドstate） |
+| テーマ | gaiaテーマ固定 |
+| 共同編集 | 不要 |
+| UIレイアウト | タブ切り替え（チャット / プレビュー） |
+| モデル | Claude Sonnet 4.5 |
+| リージョン | us-east-1 |
 
 ## 参考リンク
 

@@ -12,7 +12,7 @@
 - React
 - TypeScript
 - Vite
-- Tailwind CSS
+- Tailwind CSS v4（ゼロコンフィグ、@theme でカスタムカラー定義）
 
 ### AWS Amplify
 - @aws-amplify/backend
@@ -20,8 +20,144 @@
 
 ### エージェント・インフラ
 - strands-agents（Python >=3.10）
+- bedrock-agentcore（AgentCore SDK）
 - @marp-team/marp-cli
-- @aws-cdk/aws-bedrock-alpha
+- @aws-cdk/aws-bedrock-agentcore-alpha
+
+---
+
+## Python環境管理（uv）
+
+### 概要
+- Rustで書かれた高速なPythonパッケージマネージャー
+- pip/venv/pyenvの代替
+
+### 基本コマンド
+```bash
+# プロジェクト初期化
+uv init --no-workspace
+
+# 依存追加
+uv add strands-agents bedrock-agentcore
+
+# スクリプト実行
+uv run python script.py
+```
+
+### AWS CLI login 認証を使う場合
+```bash
+uv add 'botocore[crt]'
+```
+※ `aws login` で認証した場合、botocore[crt] が必要
+
+---
+
+## Bedrock AgentCore SDK（Python）
+
+### 基本構造
+```python
+from bedrock_agentcore import BedrockAgentCoreApp
+from strands import Agent
+
+app = BedrockAgentCoreApp()
+agent = Agent(model="us.anthropic.claude-sonnet-4-5-20250929-v1:0")
+
+@app.entrypoint
+async def invoke(payload):
+    prompt = payload.get("prompt", "")
+    stream = agent.stream_async(prompt)
+    async for event in stream:
+        yield event
+
+if __name__ == "__main__":
+    app.run()  # ポート8080でリッスン
+```
+
+### 必要な依存関係（requirements.txt）
+```
+bedrock-agentcore
+strands-agents
+```
+※ fastapi/uvicorn は不要（SDKに内包）
+
+### エンドポイント
+- `POST /invocations` - エージェント実行
+- `GET /ping` - ヘルスチェック
+
+---
+
+## Strands Agents
+
+### 基本情報
+- AWS が提供する AI エージェントフレームワーク
+- Python で実装
+- Bedrock モデルと統合
+
+### Agent作成
+```python
+from strands import Agent
+
+agent = Agent(
+    model="us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    system_prompt="あなたはアシスタントです",
+)
+```
+
+### ストリーミング
+```python
+async for event in agent.stream_async(prompt):
+    if "data" in event:
+        print(event["data"], end="", flush=True)
+```
+
+### イベントタイプ
+- `data`: テキストチャンク
+- `current_tool_use`: ツール使用情報
+- `result`: 最終結果
+
+---
+
+## AgentCore Runtime CDK（TypeScript）
+
+### パッケージ
+```bash
+npm install @aws-cdk/aws-bedrock-agentcore-alpha
+```
+
+### Runtime定義
+```typescript
+import * as agentcore from '@aws-cdk/aws-bedrock-agentcore-alpha';
+import * as path from 'path';
+
+// ローカルDockerイメージからビルド
+const artifact = agentcore.AgentRuntimeArtifact.fromAsset(
+  path.join(__dirname, 'agent/runtime')
+);
+
+const runtime = new agentcore.Runtime(stack, 'MarpAgent', {
+  runtimeName: 'marp-agent',
+  agentRuntimeArtifact: artifact,
+});
+```
+
+### Cognito認証統合
+```typescript
+authorizerConfiguration: agentcore.RuntimeAuthorizerConfiguration.usingCognito(
+  userPool,
+  [userPoolClient]
+)
+```
+
+### Amplify Gen2との統合
+```typescript
+// amplify/backend.ts
+const backend = defineBackend({ auth });
+const stack = backend.createStack('AgentCoreStack');
+
+// Amplifyの認証リソースを参照
+const userPool = backend.auth.resources.userPool;
+const userPoolClient = backend.auth.resources.userPoolClient;
+```
 
 ---
 
@@ -57,12 +193,6 @@
   2. sandbox と main でビルド方法を分岐
   3. Amplify Console の Docker 対応を待つ
 
-### 関連バグ
-- ECR ソースで `DescribeImages` が `ImageNotFoundException` になる問題
-  - 原因: AWS SDK（smithy/core）の特定バージョンのリグレッション
-  - CDK/Amplify/SDK のリポジトリ横断で調査された
-  - 依存バージョン更新で自動修正される見込み
-
 ---
 
 ## Marp CLI
@@ -72,98 +202,58 @@
 - PDF / HTML / PPTX 出力対応
 - 公式: https://marp.app/
 
-### インストール
-```bash
-npm install -g @marp-team/marp-cli
-```
-
-### PDF 出力の依存
-- Puppeteer / Chromium が必要
-- Docker では別途 Chromium インストールが必要
-
+### Docker内での設定
 ```dockerfile
-# 例
 RUN apt-get update && apt-get install -y chromium
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ```
 
 ### Marp フロントマター
 ```yaml
 ---
 marp: true
-theme: gaia       # default, gaia, uncover
-size: 16:9        # 4:3 も可能
-paginate: true    # ページ番号表示
+theme: gaia
+size: 16:9
+paginate: true
 ---
 ```
 
-### スライド区切り
-```markdown
----
-```
-（3つのハイフン）
-
 ---
 
-## Strands Agents
+## Tailwind CSS v4
 
-### 基本情報
-- AWS が提供する AI エージェントフレームワーク
-- Python で実装
-- Bedrock モデルと統合
-
-### ストリーミング
-```python
-async for event in agent.stream_async(prompt):
-    # event を処理
-```
-
-### AgentCore Runtime との統合
-- コンテナ化してデプロイ
-- Cognito 認証との統合が可能
-
----
-
-## Amplify Gen2
-
-### カスタムリソースの追加
+### Vite統合
 ```typescript
-// amplify/backend.ts
-import { defineBackend } from '@aws-amplify/backend';
-import { myCustomStack } from './custom/resource';
+// vite.config.ts
+import tailwindcss from '@tailwindcss/vite'
 
-const backend = defineBackend({
-  auth,
-  // ...
-});
-
-// カスタムスタックを追加
-backend.createStack('MyCustomStack');
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
 ```
 
-### 認証（Cognito）
-```typescript
-// amplify/auth/resource.ts
-import { defineAuth } from '@aws-amplify/backend';
+### カスタムカラー定義
+```css
+/* src/index.css */
+@import "tailwindcss";
 
-export const auth = defineAuth({
-  loginWith: {
-    email: true,
-  },
-});
+@theme {
+  --color-kag-blue: #0e0d6a;
+}
 ```
 
-### 環境変数での分岐
-```typescript
-// フロントエンド
-const isProduction = import.meta.env.PROD;
+### 使用方法
+```jsx
+<h1 className="text-kag-blue">タイトル</h1>
 ```
 
 ---
 
-## 今後追加予定のナレッジ
+## 参考リンク
 
-- [ ] AgentCore Runtime の詳細設定
-- [ ] SSE (Server-Sent Events) の実装パターン
-- [ ] Tailwind CSS のベストプラクティス
-- [ ] Marp のカスタムテーマ作成方法
+- [Marp公式](https://marp.app/)
+- [Strands Agents](https://strandsagents.com/)
+- [Amplify Gen2](https://docs.amplify.aws/gen2/)
+- [AgentCore CDK](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-bedrock-agentcore-alpha-readme.html)
+- [uv](https://docs.astral.sh/uv/)
