@@ -1,8 +1,15 @@
+import * as path from 'path';
+import * as url from 'url';
 import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as agentcore from '@aws-cdk/aws-bedrock-agentcore-alpha';
+import { ContainerImageBuild } from 'deploy-time-build';
+import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
 import type { IUserPool, IUserPoolClient } from 'aws-cdk-lib/aws-cognito';
+
+// ESモジュールで__dirnameを取得
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface MarpAgentProps {
   stack: cdk.Stack;
@@ -12,20 +19,30 @@ interface MarpAgentProps {
 }
 
 export function createMarpAgent({ stack, userPool, userPoolClient, nameSuffix }: MarpAgentProps) {
-  // ECR リポジトリからイメージを参照（ARM64）
-  const ecrRepository = ecr.Repository.fromRepositoryName(
-    stack,
-    'MarpAgentEcrRepository',
-    'marp-agent'
-  );
-  const agentRuntimeArtifact = agentcore.AgentRuntimeArtifact.fromEcrRepository(
-    ecrRepository,
-    'latest'
-  );
+  // 環境判定: sandbox（ローカル）vs 本番（Amplify Console）
+  const isSandbox = !process.env.AWS_BRANCH;
+
+  let agentRuntimeArtifact: agentcore.AgentRuntimeArtifact;
+
+  if (isSandbox) {
+    // sandbox: ローカルでARM64ビルド
+    agentRuntimeArtifact = agentcore.AgentRuntimeArtifact.fromAsset(
+      path.join(__dirname, 'runtime')
+    );
+  } else {
+    // 本番: CodeBuildでARM64ビルド（deploy-time-build）
+    const containerImageBuild = new ContainerImageBuild(stack, 'MarpAgentImageBuild', {
+      directory: path.join(__dirname, 'runtime'),
+      platform: Platform.LINUX_ARM64,
+      tag: 'latest',
+    });
+    agentRuntimeArtifact = agentcore.AgentRuntimeArtifact.fromEcrRepository(
+      containerImageBuild.repository,
+      'latest'
+    );
+  }
 
   // 認証設定（JWT認証）
-  // usingCognito()はclient_id/audienceの両方を検証するため、
-  // より細かく制御できるusingJWT()を使用
   const discoveryUrl = userPool
     ? `https://cognito-idp.${stack.region}.amazonaws.com/${userPool.userPoolId}/.well-known/openid-configuration`
     : undefined;
@@ -33,8 +50,7 @@ export function createMarpAgent({ stack, userPool, userPoolClient, nameSuffix }:
   const authConfig = discoveryUrl && userPoolClient
     ? agentcore.RuntimeAuthorizerConfiguration.usingJWT(
         discoveryUrl,
-        [userPoolClient.userPoolClientId], // allowedClients
-        // allowedAudience は省略（Resource Server未使用のため）
+        [userPoolClient.userPoolClientId],
       )
     : undefined;
 
@@ -51,7 +67,7 @@ export function createMarpAgent({ stack, userPool, userPoolClient, nameSuffix }:
     },
   });
 
-  // Bedrockモデル呼び出し権限を付与（全モデル + 推論プロファイル）
+  // Bedrockモデル呼び出し権限を付与
   runtime.addToRolePolicy(new iam.PolicyStatement({
     actions: [
       'bedrock:InvokeModel',
