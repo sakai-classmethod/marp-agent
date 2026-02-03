@@ -5,12 +5,14 @@ import { observe } from '@marp-team/marpit-svg-polyfill';
 import borderTheme from '../themes/border.css?raw';
 import gradientTheme from '../themes/gradient.css?raw';
 import beamTheme from '../themes/beam.css?raw';
+import classmethodTheme from '../themes/classmethod.css?raw';
 
 // テーマ定義
 const THEMES = [
   { id: 'border', name: 'Border', css: borderTheme },
   { id: 'gradient', name: 'Gradient', css: gradientTheme },
   { id: 'beam', name: 'Beam', css: beamTheme },
+  { id: 'classmethod', name: 'Classmethod', css: classmethodTheme },
 ] as const;
 
 type ThemeId = typeof THEMES[number]['id'];

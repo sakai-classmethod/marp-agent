@@ -1,0 +1,102 @@
+/* @theme classmethod */
+/* Original: https://github.com/classmethod/classmethod-marp-theme */
+
+@import "default";
+
+:root {
+  /* Classmethodカラー */
+  --blue-very-deep: #2C67E5;
+  --red-deep: #DF3756;
+  --gray-medium: #434343;
+  --gray-light: #595959;
+  --gray-lightest: #999999;
+  --bg-accent: #F3F3F3;
+  --bg-accent-code: #e1e1e1;
+}
+
+section {
+  background-color: #FFFFFF;
+  color: var(--gray-medium);
+  padding: 100px 60px 0 60px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--gray-medium);
+}
+
+h1>strong, h2>strong, h3>strong {
+  color: var(--blue-very-deep);
+}
+
+a {
+  color: var(--blue-very-deep);
+}
+
+code {
+  background-color: var(--bg-accent-code);
+}
+
+blockquote {
+  border-left: 4px solid var(--gray-light);
+}
+
+/* ページネーション */
+section::after {
+  font-size: 0.75em;
+  content: attr(data-marpit-pagination) " / " attr(data-marpit-pagination-total);
+}
+
+/* 画像中央配置 */
+img[alt~="center"] {
+  display: block;
+  margin: 0 auto;
+}
+
+/* || SECTION CLASS: title */
+section.title {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--bg-accent);
+  padding: 100px;
+  text-align: center;
+}
+
+/* || SECTION CLASS: section */
+section.section {
+  background-color: var(--bg-accent);
+  padding: 0 100px;
+  justify-content: center;
+  text-align: center;
+}
+
+/* || SECTION CLASS: small-text */
+section.small-text > p,
+section.small-text > ul,
+section.small-text > ol,
+section.small-text > blockquote {
+  font-size: 0.65em;
+}
+
+/* || SECTION CLASS: center */
+section.center {
+  justify-content: center;
+}
+
+/* || SECTION CLASS: column-layout */
+section.column-layout {
+  flex-direction: row;
+  gap: 16px;
+  justify-content: space-around;
+}
+
+/* || SECTION CLASS: text-blue */
+section.text-blue, section.text-blue p {
+  color: var(--blue-very-deep);
+}
+
+/* || SECTION CLASS: text-red */
+section.text-red, section.text-red p {
+  color: var(--red-deep);
+}
