@@ -34,9 +34,7 @@ if (isSandbox) {
 }
 
 // 共有スライド用インフラを作成（S3 + CloudFront）
-const sharedSlides = new SharedSlidesConstruct(agentCoreStack, 'SharedSlides', {
-  nameSuffix,
-});
+const sharedSlides = new SharedSlidesConstruct(agentCoreStack, 'SharedSlides', {});
 
 // Marp Agentを作成（Cognito認証統合）
 const { runtime } = createMarpAgent({
